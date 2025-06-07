@@ -4,9 +4,21 @@
     {
       "src": "index.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "public/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
+    {
+      "src": "/img/(.*)",
+      "dest": "/public/img/$1"
+    },
+    {
+      "src": "/css/(.*)",
+      "dest": "/public/css/$1"
+    },
     {
       "src": "/api/(.*)",
       "dest": "index.js"
@@ -17,7 +29,8 @@
       "headers": {
         "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
         "Pragma": "no-cache",
-        "Expires": "0"
+        "Expires": "0",
+        "Set-Cookie": "sessionId=; Path=/; HttpOnly; SameSite=Lax"
       }
     }
   ],

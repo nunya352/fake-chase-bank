@@ -26,8 +26,10 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    httpOnly: true
-  }
+    httpOnly: true,
+    path: '/'
+  },
+  name: 'sessionId' // Explicitly set session cookie name
 }));
 
 // Helper function to generate fake transactions
@@ -95,9 +97,13 @@ const fakeUser = {
 // Middleware to check login with debug logging
 function requireLogin(req, res, next) {
   console.log('Checking login status');
-  console.log('Session:', req.session);
+  console.log('Session state:', {
+    loggedIn: req.session.loggedIn,
+    hasUser: !!req.session.user,
+    sessionID: req.session.id
+  });
   
-  if (req.session && req.session.loggedIn) {
+  if (req.session && req.session.loggedIn && req.session.user) {
     console.log('User is logged in');
     next();
   } else {
@@ -118,19 +124,32 @@ app.get('/login', (req, res) => {
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  console.log('Login attempt:', { username, password }); // Debug log
+  console.log('Login attempt:', { username, password });
   
   if (username === fakeUser.username && password === fakeUser.password) {
+    // Set session data
     req.session.loggedIn = true;
     req.session.user = fakeUser;
     
     // Debug logs
     console.log('Login successful');
-    console.log('Session after login:', req.session);
+    console.log('Session after login:', {
+      loggedIn: req.session.loggedIn,
+      hasUser: !!req.session.user,
+      sessionID: req.session.id
+    });
     
-    res.redirect('/dashboard');
+    // Force session save before redirect
+    req.session.save((err) => {
+      if (err) {
+        console.error('Session save error:', err);
+        return res.render('login', { error: 'An error occurred. Please try again.' });
+      }
+      console.log('Session saved, redirecting to dashboard');
+      res.redirect('/dashboard');
+    });
   } else {
-    console.log('Login failed'); // Debug log
+    console.log('Login failed');
     res.render('login', { error: 'Invalid username or password.' });
   }
 });
