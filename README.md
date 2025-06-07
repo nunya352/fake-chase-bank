@@ -13,7 +13,7 @@ A mock banking interface that mimics the Chase Bank online banking experience. T
 
 ## Demo
 
-Visit the live demo: [Fake Chase Bank](https://[your-github-username].github.io/fake-chase-bank)
+Visit the live demo: [Fake Chase Bank](https://nunya352.github.io/fake-chase-bank)
 
 ## Local Development
 
