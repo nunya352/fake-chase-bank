@@ -16,15 +16,17 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Session configuration
 app.use(session({
   secret: 'chase-fake-secret',
-  resave: false,
+  resave: true,
   saveUninitialized: true,
   store: sessionStore,
   cookie: { 
-    maxAge: 600000,
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax'
+    sameSite: 'lax',
+    httpOnly: true
   }
 }));
 
@@ -90,11 +92,16 @@ const fakeUser = {
   )
 };
 
-// Middleware to check login
+// Middleware to check login with debug logging
 function requireLogin(req, res, next) {
-  if (req.session.loggedIn) {
+  console.log('Checking login status');
+  console.log('Session:', req.session);
+  
+  if (req.session && req.session.loggedIn) {
+    console.log('User is logged in');
     next();
   } else {
+    console.log('User is not logged in, redirecting to login');
     res.redirect('/login');
   }
 }
@@ -108,16 +115,32 @@ app.get('/login', (req, res) => {
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
+  console.log('Login attempt:', { username, password }); // Debug log
+
   if (username === fakeUser.username && password === fakeUser.password) {
     req.session.loggedIn = true;
     req.session.user = fakeUser;
+    
+    // Debug logs
+    console.log('Login successful');
+    console.log('Session after login:', req.session);
+    
     res.redirect('/dashboard');
   } else {
+    console.log('Login failed'); // Debug log
     res.render('login', { error: 'Invalid username or password.' });
   }
 });
 
 app.get('/dashboard', requireLogin, (req, res) => {
+  console.log('Dashboard access attempt');
+  console.log('Session state:', req.session);
+  
+  if (!req.session.loggedIn || !req.session.user) {
+    console.log('Session invalid, redirecting to login');
+    return res.redirect('/login');
+  }
+  
   res.render('dashboard', { user: req.session.user });
 });
 
