@@ -5,7 +5,10 @@ const path = require('path');
 const moment = require('moment');
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
+
+// Configure session store for Vercel
+const sessionStore = new session.MemoryStore();
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -17,7 +20,12 @@ app.use(session({
   secret: 'chase-fake-secret',
   resave: false,
   saveUninitialized: true,
-  cookie: { maxAge: 600000 }
+  store: sessionStore,
+  cookie: { 
+    maxAge: 600000,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax'
+  }
 }));
 
 // Helper function to generate fake transactions
@@ -294,6 +302,12 @@ function validateCardNumber(cardNumber) {
   return (sum + lastDigit) % 10 === 0;
 }
 
-app.listen(PORT, () => {
-  console.log(`Fake Chase Bank app running at http://localhost:${PORT}`);
-});
+// Modify the server startup for Vercel
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+}
+
+// Export the Express app for Vercel
+module.exports = app;
