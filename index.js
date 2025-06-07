@@ -19,17 +19,17 @@ app.use(express.urlencoded({ extended: true }));
 // Session configuration
 app.use(session({
   secret: 'chase-fake-secret',
-  resave: true,
-  saveUninitialized: true,
+  resave: false,
+  saveUninitialized: false,
   store: sessionStore,
   cookie: {
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: true,
+    sameSite: 'none',
     httpOnly: true,
     path: '/'
   },
-  name: 'sessionId' // Explicitly set session cookie name
+  name: 'sessionId'
 }));
 
 // Helper function to generate fake transactions
@@ -68,13 +68,13 @@ const fakeUser = {
   accounts: [
     {
       type: 'Checking',
-      number: '21865912',  // Fixed account number for checking
+      number: '21865912',
       balance: faker.finance.amount(1000, 50000, 2, '$'),
       name: 'My Checking'
     },
     {
       type: 'Savings',
-      number: '87254837',  // Fixed account number for savings
+      number: '87254837',
       balance: faker.finance.amount(5000, 250000, 2, '$'),
       name: 'My Savings'
     }
@@ -94,20 +94,11 @@ const fakeUser = {
   )
 };
 
-// Middleware to check login with debug logging
+// Middleware to check login
 function requireLogin(req, res, next) {
-  console.log('Checking login status');
-  console.log('Session state:', {
-    loggedIn: req.session.loggedIn,
-    hasUser: !!req.session.user,
-    sessionID: req.session.id
-  });
-  
   if (req.session && req.session.loggedIn && req.session.user) {
-    console.log('User is logged in');
     next();
   } else {
-    console.log('User is not logged in, redirecting to login');
     res.redirect('/login');
   }
 }
@@ -124,94 +115,55 @@ app.get('/login', (req, res) => {
 
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  console.log('Login attempt:', { username, password });
   
   if (username === fakeUser.username && password === fakeUser.password) {
-    // Set session data
     req.session.loggedIn = true;
     req.session.user = fakeUser;
     
-    // Debug logs
-    console.log('Login successful');
-    console.log('Session after login:', {
-      loggedIn: req.session.loggedIn,
-      hasUser: !!req.session.user,
-      sessionID: req.session.id
-    });
-    
-    // Force session save before redirect
+    // Force session save
     req.session.save((err) => {
       if (err) {
         console.error('Session save error:', err);
         return res.render('login', { error: 'An error occurred. Please try again.' });
       }
-      console.log('Session saved, redirecting to dashboard');
+      
+      // Set cookie manually
+      res.setHeader('Set-Cookie', `sessionId=${req.session.id}; Path=/; HttpOnly; Secure; SameSite=None`);
       res.redirect('/dashboard');
     });
   } else {
-    console.log('Login failed');
     res.render('login', { error: 'Invalid username or password.' });
   }
 });
 
 app.get('/dashboard', requireLogin, (req, res) => {
-  console.log('Dashboard access attempt');
-  console.log('Session state:', req.session);
-  
-  if (!req.session.loggedIn || !req.session.user) {
-    console.log('Session invalid, redirecting to login');
-    return res.redirect('/login');
-  }
-  
   res.render('dashboard', { user: req.session.user });
 });
 
 app.get('/logout', (req, res) => {
   req.session.destroy(() => {
+    res.clearCookie('sessionId');
     res.redirect('/login');
   });
 });
 
 // API Routes
 app.post('/api/transfer', (req, res) => {
-  console.log('Received transfer request:', req.body);
-  
   const { fromAccount, toAccount, amount, date } = req.body;
   const transferAmount = parseFloat(amount);
 
-  // Find the accounts
   const fromAcc = fakeUser.accounts.find(acc => acc.number === fromAccount);
   const toAcc = fakeUser.accounts.find(acc => acc.number === toAccount);
 
-  console.log('Found accounts:', {
-    fromAccount,
-    toAccount,
-    fromAcc,
-    toAcc,
-    transferAmount
-  });
-
   if (!fromAcc || !toAcc) {
-    console.log('Invalid account numbers:', { fromAccount, toAccount });
     return res.status(400).json({ error: 'Invalid account number' });
   }
 
-  // Update account balances
-  const fromBalance = parseFloat(fromAcc.balance.replace('$', ''));
-  const toBalance = parseFloat(toAcc.balance.replace('$', ''));
-  
-  fromAcc.balance = (fromBalance - transferAmount).toFixed(2);
-  toAcc.balance = (toBalance + transferAmount).toFixed(2);
+  fromAcc.balance = (parseFloat(fromAcc.balance.replace('$', '')) - transferAmount).toFixed(2);
+  toAcc.balance = (parseFloat(toAcc.balance.replace('$', '')) + transferAmount).toFixed(2);
 
-  console.log('Updated balances:', {
-    fromBalance: fromAcc.balance,
-    toBalance: toAcc.balance
-  });
-
-  // Add transaction records
   const transactionDate = date || new Date().toISOString().split('T')[0];
   
-  // Add debit transaction
   fakeUser.transactions.unshift({
     date: transactionDate,
     description: `Transfer to ${toAcc.type} Account`,
@@ -221,7 +173,6 @@ app.post('/api/transfer', (req, res) => {
     balance: fromAcc.balance
   });
 
-  // Add credit transaction
   fakeUser.transactions.unshift({
     date: transactionDate,
     description: `Transfer from ${fromAcc.type} Account`,
@@ -231,9 +182,6 @@ app.post('/api/transfer', (req, res) => {
     balance: toAcc.balance
   });
 
-  console.log('Added transactions');
-
-  // Return updated accounts
   res.json({
     success: true,
     accounts: fakeUser.accounts,
@@ -347,12 +295,12 @@ function validateCardNumber(cardNumber) {
   return (sum + lastDigit) % 10 === 0;
 }
 
-// Modify the server startup for Vercel
+// Start server only in development
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`Server is running on http://localhost:${PORT}`);
   });
 }
 
-// Export the Express app for Vercel
+// Export for Vercel
 module.exports = app;

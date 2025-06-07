@@ -29,8 +29,7 @@
       "headers": {
         "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
         "Pragma": "no-cache",
-        "Expires": "0",
-        "Set-Cookie": "sessionId=; Path=/; HttpOnly; SameSite=Lax"
+        "Expires": "0"
       }
     }
   ],
