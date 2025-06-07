@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chase Online Banking - Sign In</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="login-page">
+  <div class="login-container">
+    <img src="/img/chase-logo-1.png" alt="Chase Logo" class="logo">
+    <h2>Sign in to Chase</h2>
+    <% if (error) { %>
+      <div class="error"><%= error %></div>
+    <% } %>
+    <form method="POST" action="/login" class="login-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+      </div>
+      <div class="form-group remember-me">
+        <input type="checkbox" id="remember" name="remember">
+        <label for="remember">Remember me</label>
+      </div>
+      <button type="submit" class="sign-in-button">Sign In</button>
+    </form>
+    <div class="login-links">
+      <a href="#" class="forgot-link">Forgot username/password?</a>
+      <a href="#" class="enroll-link">Enroll in online banking</a>
+    </div>
+    <div class="security-notice">
+      <img src="/img/security-icon.png" alt="Security" class="security-icon">
+      <p>We're committed to protecting your security</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chase Online Banking - Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+  <nav class="main-nav">
+    <div class="nav-left">
+      <img src="/img/chase-logo-1.png" alt="Chase Logo" class="logo-small">
+      <div class="nav-links">
+        <a href="/dashboard" class="active">Accounts</a>
+        <a href="/transfer">Transfer</a>
+        <a href="/payments">Pay & Transfer</a>
+        <a href="/statements">Statements</a>
+      </div>
+    </div>
+    <div class="nav-right">
+      <span class="welcome-text">Welcome, <%= user.name %></span>
+      <a href="/profile" class="profile-link"><i class="fas fa-user-circle"></i></a>
+      <a href="/logout" class="signout-link">Sign out</a>
+    </div>
+  </nav>
+
+  <div class="dashboard-container">
+    <div class="sidebar">
+      <div class="quick-actions">
+        <h3>Quick Actions</h3>
+        <button class="action-button" onclick="showTransferModal()">
+          <i class="fas fa-exchange-alt"></i> Transfer Money
+        </button>
+        <button class="action-button" onclick="showAddCardModal()">
+          <i class="fas fa-credit-card"></i> Add Card
+        </button>
+        <button class="action-button" onclick="showStatementModal()">
+          <i class="fas fa-file-alt"></i> View Statement
+        </button>
+      </div>
+    </div>
+
+    <main class="main-content">
+      <div class="accounts-summary">
+        <h2>Account Summary</h2>
+        <div class="accounts-grid">
+          <% user.accounts.forEach(account => { %>
+            <div class="account-card">
+              <div class="account-header">
+                <h3><%= account.type %> Account</h3>
+                <button class="edit-account" onclick="showEditAccountModal('<%= account.number %>')">
+                  <i class="fas fa-edit"></i>
+                </button>
+              </div>
+              <p class="account-number">Account #: <%= account.number %></p>
+              <p class="account-balance">Balance: <strong><%= account.balance %></strong></p>
+              <div class="account-actions">
+                <button onclick="showTransferModal('<%= account.number %>')">Transfer</button>
+                <button onclick="showStatementModal('<%= account.number %>')">Statement</button>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <div class="recent-activity">
+        <h2>Recent Activity</h2>
+        <div class="activity-filters">
+          <select id="accountFilter" onchange="filterTransactions()">
+            <option value="all">All Accounts</option>
+            <% user.accounts.forEach(account => { %>
+              <option value="<%= account.number %>"><%= account.type %> Account</option>
+            <% }) %>
+          </select>
+          <select id="dateFilter" onchange="filterTransactions()">
+            <option value="7">Last 7 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="90">Last 90 days</option>
+          </select>
+        </div>
+        <div class="table-container">
+          <table class="activity-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Balance</th>
+              </tr>
+            </thead>
+            <tbody id="transactionsTableBody">
+              <% user.transactions.forEach(tx => { %>
+                <tr>
+                  <td><%= tx.date %></td>
+                  <td><%= tx.description %></td>
+                  <td><%= tx.category %></td>
+                  <td class="<%= tx.type === 'credit' ? 'credit' : 'debit' %>">
+                    <%= tx.type === 'credit' ? '+' : '-' %>$<%= tx.amount %>
+                  </td>
+                  <td>$<%= tx.balance %></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modals -->
+  <div id="transferModal" class="modal">
+    <div class="modal-content">
+      <h2>Transfer Money</h2>
+      <form id="transferForm" onsubmit="handleTransfer(event)">
+        <div class="form-group">
+          <label>From Account</label>
+          <select name="fromAccount" required>
+            <% user.accounts.forEach(account => { %>
+              <option value="<%= account.number %>"><%= account.type %> - <%= account.number %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>To Account</label>
+          <select name="toAccount" required>
+            <% user.accounts.forEach(account => { %>
+              <option value="<%= account.number %>"><%= account.type %> - <%= account.number %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Amount</label>
+          <input type="number" name="amount" step="0.01" min="0.01" required>
+        </div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" name="date" required>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="primary-button">Transfer</button>
+          <button type="button" onclick="closeModal('transferModal')" class="secondary-button">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="addCardModal" class="modal">
+    <div class="modal-content">
+      <h2>Add New Card</h2>
+      <form id="addCardForm" onsubmit="handleAddCard(event)">
+        <div class="form-group">
+          <label>Card Type</label>
+          <select name="cardType" required>
+            <option value="credit">Credit Card</option>
+            <option value="debit">Debit Card</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Card Number</label>
+          <input type="text" name="cardNumber" pattern="[0-9]{16}" required>
+        </div>
+        <div class="form-group">
+          <label>Expiry Date</label>
+          <input type="text" name="expiryDate" placeholder="MM/YY" pattern="(0[1-9]|1[0-2])\/([0-9]{2})" required>
+        </div>
+        <div class="form-group">
+          <label>CVV</label>
+          <input type="text" name="cvv" pattern="[0-9]{3,4}" required>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="primary-button">Add Card</button>
+          <button type="button" onclick="closeModal('addCardModal')" class="secondary-button">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="editAccountModal" class="modal">
+    <div class="modal-content">
+      <h2>Edit Account</h2>
+      <form id="editAccountForm" onsubmit="handleEditAccount(event)">
+        <input type="hidden" name="accountNumber">
+        <div class="form-group">
+          <label>Account Name</label>
+          <input type="text" name="accountName" required>
+        </div>
+        <div class="form-group">
+          <label>Account Type</label>
+          <select name="accountType" required>
+            <option value="checking">Checking</option>
+            <option value="savings">Savings</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="primary-button">Save Changes</button>
+          <button type="button" onclick="closeModal('editAccountModal')" class="secondary-button">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading overlay -->
+  <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+    <div class="loading-spinner"></div>
+  </div>
+
+  <!-- Toast notifications -->
+  <div id="toast" class="toast" style="display: none;"></div>
+
+  <script>
+    // Modal functions
+    function showTransferModal(accountNumber = null) {
+      const modal = document.getElementById('transferModal');
+      modal.style.display = 'block';
+      if (accountNumber) {
+        document.querySelector('select[name="fromAccount"]').value = accountNumber;
+      }
+    }
+
+    function showAddCardModal() {
+      document.getElementById('addCardModal').style.display = 'block';
+    }
+
+    function showEditAccountModal(accountNumber) {
+      const modal = document.getElementById('editAccountModal');
+      const account = user.accounts.find(acc => acc.number === accountNumber);
+      
+      if (account) {
+        document.querySelector('input[name="accountNumber"]').value = account.number;
+        document.querySelector('input[name="accountName"]').value = account.name;
+        document.querySelector('select[name="accountType"]').value = account.type.toLowerCase();
+        modal.style.display = 'block';
+      }
+    }
+
+    function showStatementModal(accountNumber) {
+      window.location.href = `/statement/${accountNumber}`;
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    // Loading state management
+    function showLoading() {
+      document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    // Toast notifications
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type}`;
+      toast.style.display = 'block';
+      
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 3000);
+    }
+
+    // Form handlers
+    async function handleTransfer(event) {
+      event.preventDefault();
+      showLoading();
+      
+      const formData = new FormData(event.target);
+      const fromAccount = formData.get('fromAccount');
+      const toAccount = formData.get('toAccount');
+      const amount = formData.get('amount');
+      const date = formData.get('date');
+
+      // Log the transfer attempt
+      console.log('Transfer attempt:', { fromAccount, toAccount, amount, date });
+      
+      try {
+        const response = await fetch('/api/transfer', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fromAccount,
+            toAccount,
+            amount,
+            date
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          showToast('Transfer completed successfully');
+          closeModal('transferModal');
+          updateAccounts(data.accounts);
+          filterTransactions(); // Refresh transactions
+        } else {
+          showToast(data.error, 'error');
+        }
+      } catch (error) {
+        console.error('Transfer error:', error);
+        showToast('An error occurred during transfer', 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function handleAddCard(event) {
+      event.preventDefault();
+      showLoading();
+      
+      const formData = new FormData(event.target);
+      try {
+        const response = await fetch('/api/cards', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          showToast('Card added successfully');
+          closeModal('addCardModal');
+          // Update cards list if needed
+        } else {
+          showToast(data.error, 'error');
+        }
+      } catch (error) {
+        showToast('An error occurred while adding card', 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    async function handleEditAccount(event) {
+      event.preventDefault();
+      showLoading();
+      
+      const formData = new FormData(event.target);
+      try {
+        const response = await fetch('/api/accounts', {
+          method: 'PUT',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          showToast('Account updated successfully');
+          closeModal('editAccountModal');
+          updateAccountCard(data.account);
+        } else {
+          showToast(data.error, 'error');
+        }
+      } catch (error) {
+        showToast('An error occurred while updating account', 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // UI update functions
+    function updateAccounts(accounts) {
+      const accountsGrid = document.querySelector('.accounts-grid');
+      accountsGrid.innerHTML = accounts.map(account => `
+        <div class="account-card">
+          <div class="account-header">
+            <h3>${account.type} Account</h3>
+            <button class="edit-account" onclick="showEditAccountModal('${account.number}')">
+              <i class="fas fa-edit"></i>
+            </button>
+          </div>
+          <p class="account-number">Account #: ${account.number}</p>
+          <p class="account-balance">Balance: <strong>${account.balance}</strong></p>
+          <div class="account-actions">
+            <button onclick="showTransferModal('${account.number}')">Transfer</button>
+            <button onclick="showStatementModal('${account.number}')">Statement</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function updateAccountCard(account) {
+      const accountCard = document.querySelector(`.account-card:has(.account-number:contains('${account.number}'))`);
+      if (accountCard) {
+        accountCard.querySelector('h3').textContent = `${account.type} Account`;
+        accountCard.querySelector('.account-number').textContent = `Account #: ${account.number}`;
+      }
+    }
+
+    // Transaction filtering
+    async function filterTransactions() {
+      showLoading();
+      
+      const accountFilter = document.getElementById('accountFilter').value;
+      const dateFilter = document.getElementById('dateFilter').value;
+      
+      try {
+        const response = await fetch(`/api/transactions?accountNumber=${accountFilter}&days=${dateFilter}`);
+        const data = await response.json();
+        
+        const tbody = document.getElementById('transactionsTableBody');
+        tbody.innerHTML = data.transactions.map(tx => `
+          <tr>
+            <td>${tx.date}</td>
+            <td>${tx.description}</td>
+            <td>${tx.category}</td>
+            <td class="${tx.type === 'credit' ? 'credit' : 'debit'}">
+              ${tx.type === 'credit' ? '+' : '-'}$${tx.amount}
+            </td>
+            <td>$${tx.balance}</td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        showToast('Error loading transactions', 'error');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // Close modals when clicking outside
+    window.onclick = function(event) {
+      if (event.target.classList.contains('modal')) {
+        event.target.style.display = 'none';
+      }
+    }
+
+    // Initialize date input with today's date
+    document.querySelector('input[name="date"]').valueAsDate = new Date();
+  </script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chase Online Banking - Statement</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+  <nav class="main-nav">
+    <div class="nav-left">
+      <img src="/img/chase-logo-1.png" alt="Chase Logo" class="logo-small">
+      <div class="nav-links">
+        <a href="/dashboard">Accounts</a>
+        <a href="/transfer">Transfer</a>
+        <a href="/payments">Pay & Transfer</a>
+        <a href="/statements" class="active">Statements</a>
+      </div>
+    </div>
+    <div class="nav-right">
+      <a href="/dashboard" class="back-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+    </div>
+  </nav>
+
+  <div class="statement-container">
+    <div class="statement-header">
+      <h1>Account Statement</h1>
+      <div class="statement-info">
+        <p><strong>Account:</strong> <%= account.type %> - <%= account.number %></p>
+        <p><strong>Statement Period:</strong> <%= period.start %> to <%= period.end %></p>
+        <p><strong>Current Balance:</strong> <%= account.balance %></p>
+      </div>
+      <div class="statement-actions">
+        <button onclick="window.print()" class="print-button">
+          <i class="fas fa-print"></i> Print Statement
+        </button>
+        <button onclick="downloadPDF()" class="download-button">
+          <i class="fas fa-download"></i> Download PDF
+        </button>
+      </div>
+    </div>
+
+    <div class="statement-summary">
+      <div class="summary-card">
+        <h3>Summary</h3>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="label">Opening Balance</span>
+            <span class="value">$<%= transactions[transactions.length - 1]?.balance || '0.00' %></span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Closing Balance</span>
+            <span class="value">$<%= transactions[0]?.balance || '0.00' %></span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Total Credits</span>
+            <span class="value credit">$<%= transactions
+              .filter(t => t.type === 'credit')
+              .reduce((sum, t) => sum + parseFloat(t.amount), 0)
+              .toFixed(2) %></span>
+          </div>
+          <div class="summary-item">
+            <span class="label">Total Debits</span>
+            <span class="value debit">$<%= transactions
+              .filter(t => t.type === 'debit')
+              .reduce((sum, t) => sum + parseFloat(t.amount), 0)
+              .toFixed(2) %></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="statement-transactions">
+      <h2>Transaction History</h2>
+      <table class="statement-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Description</th>
+            <th>Category</th>
+            <th>Amount</th>
+            <th>Balance</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% transactions.forEach(tx => { %>
+            <tr>
+              <td><%= tx.date %></td>
+              <td><%= tx.description %></td>
+              <td><%= tx.category %></td>
+              <td class="<%= tx.type === 'credit' ? 'credit' : 'debit' %>">
+                <%= tx.type === 'credit' ? '+' : '-' %>$<%= tx.amount %>
+              </td>
+              <td>$<%= tx.balance %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function downloadPDF() {
+      // Implement PDF download functionality
+      alert('PDF download functionality would be implemented here');
+    }
+  </script>
+</body>
+</html> 
